@@ -25,6 +25,7 @@ Source18:         openstack-nova-xvpvncproxy.service
 Source19:         openstack-nova-console.service
 Source20:         openstack-nova-consoleauth.service
 Source25:         openstack-nova-metadata-api.service
+Source26:         openstack-nova-novncproxy.service
 
 Source21:         nova-polkit.pkla
 Source23:         nova-polkit.rules
@@ -417,6 +418,9 @@ install -p -D -m 755 %{SOURCE19} %{buildroot}%{_unitdir}/openstack-nova-console.
 install -p -D -m 755 %{SOURCE20} %{buildroot}%{_unitdir}/openstack-nova-consoleauth.service
 install -p -D -m 755 %{SOURCE25} %{buildroot}%{_unitdir}/openstack-nova-metadata-api.service
 
+mkdir -p %{buildroot}%{_unitdir}
+install -p -D -m 444 %{SOURCE26} %{buildroot}%{_unitdir}
+
 # Install sudoers
 install -p -D -m 440 %{SOURCE24} %{buildroot}%{_sysconfdir}/sudoers.d/nova
 
@@ -448,11 +452,6 @@ rm -fr %{buildroot}%{python_sitelib}/nova/tests/
 rm -fr %{buildroot}%{python_sitelib}/run_tests.*
 rm -f %{buildroot}%{_bindir}/nova-combined
 rm -f %{buildroot}/usr/share/doc/nova/README*
-
-# TODO. On F18 branch of novnc package, move the openstack-nova-novncproxy
-# subpackage to the openstack-nova-console subpackage here, and have
-# it provide openstack-nova-novncproxy
-rm -f %{buildroot}%{_bindir}/nova-novncproxy
 
 %pre common
 getent group nova >/dev/null || groupadd -r nova --gid 162
@@ -561,7 +560,7 @@ if [ $1 -eq 0 ] ; then
 fi
 %preun console
 if [ $1 -eq 0 ] ; then
-    for svc in console consoleauth xvpvncproxy; do
+    for svc in console consoleauth xvpvncproxy novncproxy; do
         /bin/systemctl --no-reload disable openstack-nova-${svc}.service > /dev/null 2>&1 || :
         /bin/systemctl stop openstack-nova-${svc}.service > /dev/null 2>&1 || :
     done
@@ -627,7 +626,7 @@ fi
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
     # Package upgrade, not uninstall
-    for svc in console consoleauth xvpvncproxy; do
+    for svc in console consoleauth xvpvncproxy novncproxy; do
         /bin/systemctl try-restart openstack-nova-${svc}.service >/dev/null 2>&1 || :
     done
 fi
@@ -724,8 +723,11 @@ fi
 %files console
 %{_bindir}/nova-console*
 %{_bindir}/nova-xvpvncproxy
+%{_bindir}/nova-novncproxy
+%{_mandir}/man1/nova-novncproxy.1*
 %{_unitdir}/openstack-nova-console*.service
 %{_unitdir}/openstack-nova-xvpvncproxy.service
+%{_unitdir}/openstack-nova-novncproxy.service
 
 %files -n python-nova
 %defattr(-,root,root,-)
@@ -739,6 +741,9 @@ fi
 %endif
 
 %changelog
+* Thu Oct 18 2012 Nikola Đipanov <ndipanov@redhat.com> - 2012.2-1.1
+- Adds the openstack-nova-novncproxy service to the console subpackage (#859127)
+
 * Thu Sep 27 2012 Pádraig Brady <pbrady@redhat.com> - 2012.2-1
 - Update to folsom final
 
