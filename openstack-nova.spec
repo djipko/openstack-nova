@@ -35,6 +35,8 @@ Source24:         openstack-nova-consoleauth.init
 Source240:        openstack-nova-consoleauth.upstart
 Source25:         openstack-nova-metadata-api.init
 Source250:        openstack-nova-metadata-api.upstart
+Source26:         openstack-nova-novncproxy.init
+Source260:        openstack-nova-novncproxy.upstart
 
 Source20:         nova-sudoers
 Source21:         nova-polkit.pkla
@@ -440,6 +442,7 @@ install -p -D -m 755 %{SOURCE18} %{buildroot}%{_initrddir}/openstack-nova-xvpvnc
 install -p -D -m 755 %{SOURCE19} %{buildroot}%{_initrddir}/openstack-nova-console
 install -p -D -m 755 %{SOURCE24} %{buildroot}%{_initrddir}/openstack-nova-consoleauth
 install -p -D -m 755 %{SOURCE25} %{buildroot}%{_initrddir}/openstack-nova-metadata-api
+install -p -D -m 755 %{SOURCE26} %{buildroot}%{_initrddir}/openstack-nova-novncproxy
 
 # Install sudoers
 install -p -D -m 440 %{SOURCE20} %{buildroot}%{_sysconfdir}/sudoers.d/nova
@@ -467,6 +470,7 @@ install -p -m 644 %{SOURCE180} %{buildroot}%{_datadir}/nova/
 install -p -m 644 %{SOURCE190} %{buildroot}%{_datadir}/nova/
 install -p -m 644 %{SOURCE240} %{buildroot}%{_datadir}/nova/
 install -p -m 644 %{SOURCE250} %{buildroot}%{_datadir}/nova/
+install -p -m 644 %{SOURCE260} %{buildroot}%{_datadir}/nova/
 
 # Install rootwrap files in /usr/share/nova/rootwrap
 mkdir -p %{buildroot}%{_datarootdir}/nova/rootwrap/
@@ -481,11 +485,6 @@ rm -fr %{buildroot}%{python_sitelib}/nova/tests/
 rm -fr %{buildroot}%{python_sitelib}/run_tests.*
 rm -f %{buildroot}%{_bindir}/nova-combined
 rm -f %{buildroot}/usr/share/doc/nova/README*
-
-# TODO. On F18 branch of novnc package, move the openstack-nova-novncproxy
-# subpackage to the openstack-nova-console subpackage here, and have
-# it provide openstack-nova-novncproxy
-rm -f %{buildroot}%{_bindir}/nova-novncproxy
 
 %pre common
 getent group nova >/dev/null || groupadd -r nova --gid 162
@@ -574,7 +573,7 @@ if [ $1 -eq 0 ] ; then
 fi
 %preun console
 if [ $1 -eq 0 ] ; then
-    for svc in console consoleauth xvpvncproxy; do
+    for svc in console consoleauth xvpvncproxy novncproxy; do
         /sbin/service openstack-nova-${svc} stop >/dev/null 2>&1
         /sbin/chkconfig --del openstack-nova-${svc}
     done
@@ -632,7 +631,7 @@ fi
 %postun console
 if [ $1 -ge 1 ] ; then
     # Package upgrade, not uninstall
-    for svc in console consoleauth xvpvncproxy; do
+    for svc in console consoleauth xvpvncproxy novncproxy; do
         /sbin/service openstack-nova-${svc} condrestart > /dev/null 2>&1 || :
     done
 fi
@@ -735,10 +734,13 @@ fi
 %files console
 %{_bindir}/nova-console*
 %{_bindir}/nova-xvpvncproxy
+%{_bindir}/nova-novncproxy
 %{_initrddir}/openstack-nova-console*
 %{_datarootdir}/nova/openstack-nova-console*.upstart
 %{_initrddir}/openstack-nova-xvpvncproxy
 %{_datarootdir}/nova/openstack-nova-xvpvncproxy.upstart
+%{_initrddir}/openstack-nova-novncproxy
+%{_datarootdir}/nova/openstack-nova-novncproxy.upstart
 
 %files -n python-nova
 %defattr(-,root,root,-)
@@ -752,6 +754,9 @@ fi
 %endif
 
 %changelog
+* Thu Oct 18 2012 Nikola Dipanov <ndipanov@redhat.com> - 2012.2-1.1
+- Adds the openstack-nova-novncproxy service to the console subpackage (#859127)
+
 * Thu Oct 11 2012 Pádraig Brady <pbrady@redhat.com> - 2012.2-1
 - Update to folsom final
 
